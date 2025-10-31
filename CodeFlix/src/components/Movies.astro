@@ -1,0 +1,44 @@
+---
+import CardMovie from "../components/CardMovie.astro";
+import { getComedyMovies } from "../services/movies"
+
+const movies = await getComedyMovies()
+---
+
+<div class="movies-grid">
+  {movies.map((movie) => (
+    <CardMovie movie={movie} />
+  ))}
+</div>
+
+<style>
+  .movies-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 👈 4 columnas */
+    gap: 2rem;
+    padding: 2rem;
+    justify-content: center; /* centra el grid */
+    align-items: start; /* mantiene alineadas las tarjetas arriba */
+    max-width: 1400px; /* limita el ancho total para que no se extienda demasiado */
+    margin: 0 auto; /* centra horizontalmente el grid en la página */
+  }
+
+  /* Responsivo: menos columnas según el ancho */
+  @media (max-width: 1200px) {
+    .movies-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .movies-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 600px) {
+    .movies-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
