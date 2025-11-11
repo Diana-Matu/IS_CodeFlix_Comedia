@@ -1,44 +1,185 @@
 ---
-import CardMovie from "../components/CardMovie.astro";
-import { getComedyMovies } from "../services/movies"
+// src/components/Movies.astro
+import CardMovie from "./CardMovie.astro";
+import { getComedyMovies } from "../services/movies";
 
-const movies = await getComedyMovies()
+const initialMovies = await getComedyMovies(); // SSR: muestra películas de comedia por defecto
 ---
 
-<div class="movies-grid">
-  {movies.map((movie) => (
-    <CardMovie movie={movie} />
-  ))}
-</div>
+
+<section class="movies-section">
+  <div class="container">
+
+    <div class="controls">
+      <form id="search-form" class="search-bar" on:submit="return false;">
+        <input id="search-input" type="text" placeholder="Buscar película o serie..." />
+        <button id="search-button" type="button">🔍 Buscar</button>
+      </form>
+
+      <div class="filters">
+        <select id="filter-select" aria-label="Filtros">
+          <option value="comedy-movies" selected>🎬 Películas de comedia</option>
+          <option value="comedy-series">📺 Series de comedia</option>
+          <option value="all">🌍 Todos los géneros</option>
+          <option value="movies-all">🎞️ Películas (todos los géneros)</option>
+          <option value="series-all">📺 Series (todos los géneros)</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+
+    <div id="movies-grid" class="movies-grid">
+      <!-- SSR rendering -->
+      {initialMovies.map(movie => <CardMovie movie={movie} />)}
+    </div>
+
+  </div>
+</section>
+
+<script type="module" is:inline>
+  console.log("Movies client script loaded");
+
+  const moviesGrid = document.getElementById("movies-grid");
+  const statusEl = document.getElementById("status");
+  const searchInput = document.getElementById("search-input");
+  const searchBtn = document.getElementById("search-button");
+  const filterSel = document.getElementById("filter-select");
+
+  function setStatus(msg) {
+    statusEl.textContent = msg;
+  }
+
+  async function fetchAndRender({ filter = "comedy-movies", query = "" } = {}) {
+    setStatus("Cargando...");
+    try {
+      const qs = new URLSearchParams();
+      if (filter) qs.set("filter", filter);
+      if (query) qs.set("query", query);
+      const res = await fetch(`/api/movies?${qs.toString()}`);
+      // LOG: mostrar endpoint que el backend usó
+      const usedEndpoint = res.headers.get("X-TMDB-ENDPOINT");
+      console.log("Response X-TMDB-ENDPOINT:", usedEndpoint);
+
+      if (!res.ok) {
+        const txt = await res.text();
+        console.error("API error:", res.status, txt);
+        throw new Error("API error");
+      }
+      const data = await res.json();
+
+      // Mostrar en consola primeras 3 ids y tipos
+      console.log("API returned", data.length, "items; sample ids:", data.slice(0,3).map(x=>x.id));
+
+      renderMovies(data);
+      setStatus(data.length ? "" : "No se encontraron resultados.");
+
+      // opcional: mostrar en UI el endpoint consultado para depuración (temporal)
+      // statusEl.textContent = usedEndpoint ?? statusEl.textContent;
+
+    } catch (err) {
+      console.error(err);
+      setStatus("Error cargando películas.");
+    }
+  }
+
+  function clearGrid() { moviesGrid.innerHTML = ""; }
+
+  function renderMovies(movies) {
+    clearGrid();
+    const list = movies.slice(0, 24);
+    for (const m of list) {
+      const link = document.createElement("a");
+      link.className = "card";
+      link.href = `/movies/${m.id}`;
+
+      const img = document.createElement("img");
+      img.loading = "lazy";
+      img.alt = m.title ?? m.name ?? "Untitled";
+      img.src = m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : "https://via.placeholder.com/500x750?text=No+Image";
+      img.style.width = "100%";
+      img.style.height = "340px";
+      img.style.objectFit = "cover";
+      link.appendChild(img);
+
+      const header = document.createElement("div");
+      header.className = "card-info";
+
+      const h2 = document.createElement("h2");
+      h2.className = "title";
+      h2.textContent = m.title ?? m.name ?? "Untitled";
+      header.appendChild(h2);
+
+      const p = document.createElement("p");
+      p.className = "rating";
+      p.textContent = `⭐ ${m.vote_average ?? "—"} • ${m.release_date ?? m.first_air_date ?? ""}`;
+      header.appendChild(p);
+
+      if (m.overview) {
+        const ov = document.createElement("p");
+        ov.className = "overview";
+        ov.textContent = m.overview;
+        header.appendChild(ov);
+      }
+
+      link.appendChild(header);
+      moviesGrid.appendChild(link);
+    }
+  }
+
+  searchBtn.addEventListener("click", () => {
+    const q = searchInput.value.trim();
+    fetchAndRender({ filter: filterSel.value, query: q });
+  });
+
+  searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      searchBtn.click();
+    }
+  });
+
+  filterSel.addEventListener("change", () => {
+    const q = searchInput.value.trim();
+    fetchAndRender({ filter: filterSel.value, query: q });
+  });
+
+  // OPTIONAL: call once on load to refresh client-side
+  // fetchAndRender({ filter: 'comedy-movies' });
+</script>
+
 
 <style>
-  .movies-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr); /* 👈 4 columnas */
-    gap: 2rem;
-    padding: 2rem;
-    justify-content: center; /* centra el grid */
-    align-items: start; /* mantiene alineadas las tarjetas arriba */
-    max-width: 1400px; /* limita el ancho total para que no se extienda demasiado */
-    margin: 0 auto; /* centra horizontalmente el grid en la página */
-  }
+/* Styles local to this component */
+:root { --yellow: #ffea00; --bg: #0a0a09; --muted: #aaa; }
+.movies-section { background: var(--bg); color: var(--yellow); padding: 2rem 1rem; min-height: 60vh; }
+.container { max-width: 1200px; margin: 0 auto; }
 
-  /* Responsivo: menos columnas según el ancho */
-  @media (max-width: 1200px) {
-    .movies-grid {
-      grid-template-columns: repeat(3, 1fr);
-    }
-  }
+.controls { display:flex; gap:1rem; justify-content: center; align-items: center; margin-bottom:1rem; flex-wrap:wrap; }
+.search-bar { display:flex; gap: .5rem; background:#111; padding: .4rem; border-radius:9999px; align-items:center; }
+.search-bar input { background: none; border: none; color: #fff; padding: .6rem .8rem; outline:none; width:320px; max-width:60vw; }
+.search-bar button { background: var(--yellow); color: #000; border:none; padding:.5rem 1rem; border-radius:9999px; font-weight:700; cursor:pointer; }
 
-  @media (max-width: 900px) {
-    .movies-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
+.filters select { background:#000; color:var(--yellow); border:2px solid var(--yellow); padding:.5rem .9rem; border-radius:12px; }
 
-  @media (max-width: 600px) {
-    .movies-grid {
-      grid-template-columns: 1fr;
-    }
-  }
+/* status */
+.status { color: #ddd; text-align:center; margin-bottom:1rem; min-height:1.2rem; }
+
+/* grid */
+.movies-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+}
+@media (max-width:1200px) { .movies-grid { grid-template-columns: repeat(3,1fr); } }
+@media (max-width:900px) { .movies-grid { grid-template-columns: repeat(2,1fr); } }
+@media (max-width:600px) { .movies-grid { grid-template-columns: 1fr; } }
+
+/* card (client-rendered) — same look as CardMovie.astro */
+.card { display:flex; flex-direction:column; background:#000; border-radius:12px; color:#fff; overflow:hidden; text-decoration:none; transition:transform .25s; }
+.card:hover { transform:scale(1.06); box-shadow: 0 0 15px 6px #ffea00; }
+.card-info { padding:.6rem; text-align:center; }
+.title { color: var(--yellow); font-weight:700; margin: .25rem 0; }
+.rating { color:#ccc; font-size:.95rem; margin: .15rem 0; }
+.overview { color: var(--muted); font-size:.85rem; line-height:1.2; max-height:3.6em; overflow:hidden; }
 </style>

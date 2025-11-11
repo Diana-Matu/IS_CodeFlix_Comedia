@@ -1,58 +1,39 @@
-export const getComedyMovies = async () => {
-    interface Movie {
-        id: number;
-        title: string;
-        poster_path: string | null;
-        vote_average: number;
-        release_date: string;
-        overview?: string;
-    }
-
-    const res = await fetch(
-    "https://api.themoviedb.org/3/discover/movie?language=en-US&with_genres=35",
-    {
-        headers: {
-        accept: "application/json",
-        Authorization: `Bearer ${import.meta.env.TMDB_ACCESS_TOKEN}`,
-        },
-    }
-    );
-
-    const data = await res.json();
-    const movies: Movie[] = data.results;
-    return movies;
+// src/services/movies.ts
+export type Movie = {
+  id: number;
+  title?: string;
+  name?: string;
+  poster_path?: string | null;
+  vote_average?: number;
+  release_date?: string;
+  first_air_date?: string;
+  overview?: string;
+  media_type?: string;
 };
 
-export const getComedyMoviesById = async ({ id }: { id: string | number}) => {
-    interface Movie {
-        id: number;
-        title: string;
-        poster_path: string | null;
-        vote_average: number;
-        release_date: string;
-        overview?: string;
-    }
+const API_URL = "https://api.themoviedb.org/3";
+const TOKEN = import.meta.env.TMDB_ACCESS_TOKEN;
 
-    // Aseguramos que id sea string para construir la URL
-    const movieId = String(id);
-
-    const res = await fetch(
-        `https://api.themoviedb.org/3/discover/movie?language=en-US&with_genres=35/${id}`,
-        {
-            headers: {
-                accept: "application/json",
-                Authorization: `Bearer ${import.meta.env.TMDB_ACCESS_TOKEN}`,
-            },
-        }
-    );
-
-    if (!res.ok) {
-        // Manejo básico de error
-        throw new Error(`TMDB fetch failed: ${res.status} ${res.statusText}`);
-    }
-
-    const movie: Movie = await res.json();
-    return movie;
+/**
+ * Devuelve películas de comedia (discover movie with genre 35)
+ */
+export async function getComedyMovies(): Promise<Movie[]> {
+  const res = await fetch(`${API_URL}/discover/movie?with_genres=35&language=en-US&page=1`, {
+    headers: { Authorization: `Bearer ${TOKEN}` },
+  });
+  if (!res.ok) throw new Error(`TMDB error ${res.status}`);
+  const data = await res.json();
+  return data.results || [];
 }
 
+/**
+ * Opcional: obtener detalle por id (puedes usarlo en /pages/movies/[id].astro)
+ */
+export async function getMovieById(id: string | number) {
+  const res = await fetch(`${API_URL}/movie/${id}?language=en-US`, {
+    headers: { Authorization: `Bearer ${TOKEN}` },
+  });
+  if (!res.ok) throw new Error(`TMDB error ${res.status}`);
+  return res.json();
+}
 
