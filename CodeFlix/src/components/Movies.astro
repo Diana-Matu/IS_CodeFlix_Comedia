@@ -46,6 +46,11 @@ const initialMovies = await getComedyMovies(); // SSR: muestra películas de com
   const searchBtn = document.getElementById("search-button");
   const filterSel = document.getElementById("filter-select");
 
+  //debug
+  if (!moviesGrid || !statusEl || !searchInput || !searchBtn || !filterSel) {
+    console.error("Movies script: alguno de los elementos no existe.", { moviesGrid, statusEl, searchInput, searchBtn, filterSel });
+  }
+
   function setStatus(msg) {
     statusEl.textContent = msg;
   }
@@ -54,8 +59,13 @@ const initialMovies = await getComedyMovies(); // SSR: muestra películas de com
     setStatus("Cargando...");
     try {
       const qs = new URLSearchParams();
-      if (filter) qs.set("filter", filter);
+      // Siempre enviamos el filtro (aunque esté vacío) para claridad en servidor
+      qs.set("filter", filter ?? "");
       if (query) qs.set("query", query);
+
+      // DEBUG: mostrar lo que vamos a pedir
+      console.log("→ Fetching /api/movies with QS:", qs.toString(), " (filterSel.value=", filterSel?.value, ")");
+
       const res = await fetch(`/api/movies?${qs.toString()}`);
       // LOG: mostrar endpoint que el backend usó
       const usedEndpoint = res.headers.get("X-TMDB-ENDPOINT");
@@ -68,8 +78,8 @@ const initialMovies = await getComedyMovies(); // SSR: muestra películas de com
       }
       const data = await res.json();
 
-      // Mostrar en consola primeras 3 ids y tipos
-      console.log("API returned", data.length, "items; sample ids:", data.slice(0,3).map(x=>x.id));
+      // Mostrar en consola
+      console.log("API returned", Array.isArray(data) ? data.length : "?", "items; sample ids:", (Array.isArray(data) ? data.slice(0,3).map(x=>x.id) : data));
 
       renderMovies(data);
       setStatus(data.length ? "" : "No se encontraron resultados.");
@@ -83,9 +93,10 @@ const initialMovies = await getComedyMovies(); // SSR: muestra películas de com
     }
   }
 
-  function clearGrid() { moviesGrid.innerHTML = ""; }
+  function clearGrid() { if (moviesGrid) moviesGrid.innerHTML = ""; }
 
   function renderMovies(movies) {
+    if (!moviesGrid) return;
     clearGrid();
     const list = movies.slice(0, 24);
     for (const m of list) {
@@ -127,20 +138,22 @@ const initialMovies = await getComedyMovies(); // SSR: muestra películas de com
     }
   }
 
-  searchBtn.addEventListener("click", () => {
+  searchBtn?.addEventListener("click", () => {
     const q = searchInput.value.trim();
     fetchAndRender({ filter: filterSel.value, query: q });
   });
 
-  searchInput.addEventListener("keydown", (e) => {
+  searchInput?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
       searchBtn.click();
     }
   });
 
-  filterSel.addEventListener("change", () => {
+  filterSel?.addEventListener("change", () => {
     const q = searchInput.value.trim();
+    // DEBUG: registramos el valor actual del select
+    console.log("Filter changed to:", filterSel.value);
     fetchAndRender({ filter: filterSel.value, query: q });
   });
 

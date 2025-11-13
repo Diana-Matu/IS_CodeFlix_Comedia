@@ -1,14 +1,39 @@
 import type { APIRoute } from "astro";
 
+export const prerender = false; // 🔥 Esto fuerza modo runtime (con headers y query reales)
+
 const API_KEY = "72a08ef93943ef7f2719f4d0bfb1a7cf";
 const BASE_URL = "https://api.themoviedb.org/3";
 
 export const GET: APIRoute = async ({ request }) => {
-  const url = new URL(request.url);
-  const filter = url.searchParams.get("filter") || "comedy-movies";
-  const query = url.searchParams.get("query") || "";
+  // Parse request URL safely
+    // 🧩 SOLUCIÓN COMPLETA: obtener parámetros incluso si Astro corta la query string
+  let searchParams: URLSearchParams;
 
-  console.log("🎯 Backend recibió filter =", filter, "query =", query);
+  try {
+    // 1️⃣ Intentar construir desde la URL completa
+    const fullUrl = new URL(request.url, 'http://localhost:4321');
+    if ([...fullUrl.searchParams.keys()].length > 0) {
+      searchParams = fullUrl.searchParams;
+    } else {
+      // 2️⃣ Si no hay params, intentar leer de la cabecera referer
+      const ref = request.headers.get('referer') || '';
+      const queryPart = ref.includes('?') ? ref.split('?')[1] : '';
+      searchParams = new URLSearchParams(queryPart);
+    }
+  } catch {
+    // 3️⃣ Fallback: sin errores, pero sin datos
+    searchParams = new URLSearchParams();
+  }
+
+  const rawFilter = searchParams.get("filter") ?? "";
+  const rawQuery = searchParams.get("query") ?? "";
+
+  const filter = rawFilter.trim().toLowerCase();
+  const query = rawQuery.trim();
+
+  console.log("🎯 Backend recibió filter =", JSON.stringify(filter), "query =", JSON.stringify(query));
+  console.log("Parsed searchParams:", Object.fromEntries(searchParams.entries()));
 
   let endpoint = "";
   let params = new URLSearchParams({
@@ -46,10 +71,13 @@ export const GET: APIRoute = async ({ request }) => {
         break;
 
       case "all":
-      default:
         endpoint = `${BASE_URL}/trending/all/week`;
         params.delete("with_genres");
         params.delete("sort_by");
+      default:
+        console.warn("[API] filter desconocido, usando 'comedy-movies' por defecto. rawFilter:", rawFilter);
+        endpoint = `${BASE_URL}/discover/movie`;
+        params.set("with_genres", "35"); // 35 = Comedia
         break;
     }
   }
@@ -70,6 +98,7 @@ export const GET: APIRoute = async ({ request }) => {
       headers: {
         "Content-Type": "application/json",
         "X-TMDB-ENDPOINT": finalUrl,
+        "X-RECEIVED-FILTER": filter, // cabecera para debug adicional
       },
     });
   } catch (err) {
