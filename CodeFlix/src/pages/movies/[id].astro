@@ -16,12 +16,34 @@ try {
   console.error("Error fetching movie by id:", err);
   movie = null;
 }
+
+// Detectar si es película o serie
+const isMovie = !!movie?.title;
+const isSeries = !!movie?.name && !movie?.title;
+
+// Elegir favicon según tipo
+const iconPath = isMovie
+  ? "/icons/movie-icon.svg"
+  : "/icons/series-icon.svg";
+
+// Elegir texto del título según tipo
+const titleText = isMovie
+  ? `${movie?.title}`
+  : `${movie?.name}`;
+
 ---
 
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <title>{movie ? (movie.title ?? movie.name) : `Movie ${id}`}</title>
+    <!-- Título dinámico con ícono -->
+    <title>
+      {movie ? titleText : `Contenido ${id}`}
+    </title>
+
+    <!-- Favicon dinámico -->
+    <link rel="icon" type="image/svg+xml" href={iconPath} />
+    
     <meta name="viewport" content="width=device-width, initial-scale=1" />
   </head>
 
