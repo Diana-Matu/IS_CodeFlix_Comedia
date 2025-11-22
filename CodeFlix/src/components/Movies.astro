@@ -1,9 +1,9 @@
 ---
+// src/components/Movies.astro
 import CardMovie from "./CardMovie.astro";
-import { getComedyMovies } from "../services/movies";
-
-// SSR inicial por si NO vienen parámetros en la URL:
-const initialMovies = await getComedyMovies();
+// Nota: no hacemos fetch de comedia en SSR, dejamos que el cliente cargue el dato y restaure estado
+import type { Movie } from "../services/movies";
+const initialMovies: Movie[] = []; // SSR vacío para evitar "sesgo comedia"
 ---
 
 <section class="movies-section">
@@ -29,170 +29,145 @@ const initialMovies = await getComedyMovies();
     <div id="status" class="status" role="status" aria-live="polite"></div>
 
     <div id="movies-grid" class="movies-grid">
-      {initialMovies.map(movie => (
-        <CardMovie movie={movie} filter="comedy-movies" query="" />
-      ))}
+      <!-- Si quieres mostrar algo SSR puedes mapear initialMovies aquí,
+           ahora está vacío para dejar lógica al cliente -->
+      {initialMovies.map(movie => <CardMovie movie={movie} />)}
     </div>
 
   </div>
 </section>
 
 <script type="module" is:inline>
-  window.addEventListener("DOMContentLoaded", () => {
-    console.log("%c[Movies] client script starting", "color: #8ef");
+  console.log("Movies client script loaded");
 
-    const moviesGrid = document.getElementById("movies-grid");
-    const statusEl = document.getElementById("status");
-    const searchInput = document.getElementById("search-input");
-    const searchBtn = document.getElementById("search-button");
-    const filterSel = document.getElementById("filter-select");
+  const moviesGrid = document.getElementById("movies-grid");
+  const statusEl = document.getElementById("status");
+  const searchInput = document.getElementById("search-input");
+  const searchBtn = document.getElementById("search-button");
+  const filterSel = document.getElementById("filter-select");
 
-    function setStatus(msg) {
-      statusEl.textContent = msg;
-      console.log("[Movies] status:", msg);
-    }
+  if (!moviesGrid || !statusEl || !searchInput || !searchBtn || !filterSel) {
+    console.error("Movies script: alguno de los elementos no existe.", { moviesGrid, statusEl, searchInput, searchBtn, filterSel });
+  }
 
-    // Leer params actuales de la URL
-    const url = new URL(window.location.href);
-    const initialFilter = url.searchParams.get("filter") || "comedy-movies";
-    const initialQuery = url.searchParams.get("query") || "";
+  function setStatus(msg) {
+    statusEl.textContent = msg;
+  }
 
-    console.log("[Movies] initialFilter:", initialFilter, "initialQuery:", initialQuery);
-    filterSel.value = initialFilter;
-    searchInput.value = initialQuery;
+  async function fetchAndRender({ filter = "comedy-movies", query = "" } = {}) {
+    setStatus("Cargando...");
+    try {
+      const qs = new URLSearchParams();
+      qs.set("filter", filter ?? "");
+      if (query) qs.set("query", query);
 
-    async function fetchAndRender({ filter = "comedy-movies", query = "" } = {}) {
-      setStatus("Cargando...");
-      console.log("[Movies] fetchAndRender ->", { filter, query });
+      console.log("→ Fetching /api/movies with QS:", qs.toString());
 
-      try {
-        const qs = new URLSearchParams();
-        qs.set("filter", filter);
-        if (query) qs.set("query", query);
-        const apiUrl = `/api/movies?${qs.toString()}`;
+      const res = await fetch(`/api/movies?${qs.toString()}`);
+      const usedEndpoint = res.headers.get("X-TMDB-ENDPOINT");
+      console.log("Response X-TMDB-ENDPOINT:", usedEndpoint);
 
-        console.log("[Movies] fetching", apiUrl);
-        const res = await fetch(apiUrl);
-        console.log("[Movies] response status", res.status);
-
-        // Mostrar cabeceras relevantes (si existen)
-        const debugHeaders = {
-          "x-tmdb-endpoint": res.headers.get("x-tmdb-endpoint"),
-          "x-received-filter": res.headers.get("x-received-filter"),
-          "content-type": res.headers.get("content-type")
-        };
-        console.log("[Movies] response headers:", debugHeaders);
-        setStatus(`Consultando API... Status ${res.status}. Endpoint: ${debugHeaders["x-tmdb-endpoint"] || 'n/a'}`);
-
-        const text = await res.text();
-        let data;
-        try {
-          data = JSON.parse(text);
-        } catch (err) {
-          console.error("[Movies] JSON parse error", err);
-          setStatus("Respuesta no JSON de la API — abre Network/Response para ver detalles.");
-          moviesGrid.innerHTML = `<pre style="color:#f88; padding:1rem; background:#111;">${text}</pre>`;
-          return;
-        }
-
-        // Si la API envía { error: "..."} lo mostramos
-        if (data && data.error) {
-          console.warn("[Movies] API returned error object:", data.error);
-          setStatus("API devolvió error: " + data.error);
-          moviesGrid.innerHTML = `<pre style="color:#f88; padding:1rem; background:#111;">${JSON.stringify(data, null, 2)}</pre>`;
-          return;
-        }
-
-        // TMDB devuelve normalmente un array; si viene dentro de .results, servidor ya lo normaliza.
-        const list = Array.isArray(data) ? data.slice(0, 24) : [];
-
-        setStatus(list.length ? `Mostrando ${list.length} resultados.` : "No se encontraron resultados.");
-        renderMovies(list);
-
-      } catch (err) {
-        console.error("[Movies] fetch error:", err);
-        setStatus("Error al consultar /api/movies — comprueba consola y Network.");
+      if (!res.ok) {
+        const txt = await res.text();
+        console.error("API error:", res.status, txt);
+        throw new Error("API error");
       }
-    }
+      const data = await res.json();
 
-    function clearGrid() {
-      moviesGrid.innerHTML = "";
-    }
+      console.log("API returned", Array.isArray(data) ? data.length : "?", "items; sample ids:", (Array.isArray(data) ? data.slice(0,3).map(x=>x.id) : data));
 
-    function renderMovies(movies) {
-      clearGrid();
-      if (!movies || movies.length === 0) {
-        // Si no hay resultados, mostrar SSR (para comparar)
-        const ssrHint = document.createElement("div");
-        ssrHint.style.padding = "1rem";
-        ssrHint.style.color = "#ddd";
-        ssrHint.innerHTML = "<strong>No hay resultados en la búsqueda actual.</strong>";
-        moviesGrid.appendChild(ssrHint);
-        return;
+      renderMovies(Array.isArray(data) ? data : []);
+      setStatus(data.length ? "" : "No se encontraron resultados.");
+    } catch (err) {
+      console.error(err);
+      setStatus("Error cargando películas.");
+    }
+  }
+
+  function clearGrid() { if (moviesGrid) moviesGrid.innerHTML = ""; }
+
+  // Unificamos el DOM que se genera con las clases del CSS global
+  function renderMovies(movies) {
+    if (!moviesGrid) return;
+    clearGrid();
+    const list = movies.slice(0, 24);
+    for (const m of list) {
+      const link = document.createElement("a");
+      link.className = "card";
+      link.href = `/movies/${m.id}`;
+
+      // Card image wrapper
+      const imgWrap = document.createElement("div");
+      imgWrap.className = "card-img";
+      const img = document.createElement("img");
+      img.loading = "lazy";
+      img.alt = m.title ?? m.name ?? "Untitled";
+      img.src = m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : "https://via.placeholder.com/500x750?text=No+Image";
+      imgWrap.appendChild(img);
+      link.appendChild(imgWrap);
+
+      const header = document.createElement("header");
+      header.className = "card-info";
+
+      const h2 = document.createElement("h2");
+      h2.className = "title";
+      h2.textContent = m.title ?? m.name ?? "Untitled";
+      header.appendChild(h2);
+
+      const p = document.createElement("p");
+      p.className = "rating";
+      p.textContent = `⭐ ${m.vote_average ?? "—"} • ${m.release_date ?? m.first_air_date ?? ""}`;
+      header.appendChild(p);
+
+      if (m.overview) {
+        const ov = document.createElement("p");
+        ov.className = "overview";
+        ov.textContent = m.overview;
+        header.appendChild(ov);
       }
 
-      for (const m of movies) {
-        const link = document.createElement("a");
-        link.className = "card";
-        link.href = `/movies/${m.id}?filter=${filterSel.value}&query=${searchInput.value.trim()}`;
-
-        const img = document.createElement("img");
-        img.loading = "lazy";
-        img.alt = m.title ?? m.name ?? "Untitled";
-        img.src = m.poster_path
-          ? `https://image.tmdb.org/t/p/w500${m.poster_path}`
-          : `https://via.placeholder.com/500x750?text=No+Image`;
-        img.className = "card-img";
-
-        link.appendChild(img);
-
-        const header = document.createElement("div");
-        header.className = "card-info";
-
-        const h2 = document.createElement("h2");
-        h2.className = "title";
-        h2.textContent = m.title ?? m.name ?? "Untitled";
-        header.appendChild(h2);
-
-        const p = document.createElement("p");
-        p.className = "rating";
-        p.textContent = `⭐ ${m.vote_average ?? "—"} • ${m.release_date ?? m.first_air_date ?? ""}`;
-        header.appendChild(p);
-
-        if (m.overview) {
-          const ov = document.createElement("p");
-          ov.className = "overview";
-          ov.textContent = m.overview;
-          header.appendChild(ov);
-        }
-
-        link.appendChild(header);
-        moviesGrid.appendChild(link);
-      }
+      link.appendChild(header);
+      moviesGrid.appendChild(link);
     }
+  }
 
-    // Eventos
-    searchBtn.addEventListener("click", () => {
-      const q = searchInput.value.trim();
-      history.replaceState({}, "", `/?filter=${filterSel.value}&query=${q}`);
-      fetchAndRender({ filter: filterSel.value, query: q });
-    });
+  // --- Persistencia simple: sessionStorage ---
+  function saveState() {
+    try {
+      sessionStorage.setItem("filter", filterSel.value);
+      sessionStorage.setItem("query", searchInput.value.trim());
+    } catch (e) { /* ignore */ }
+  }
 
-    searchInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        searchBtn.click();
-      }
-    });
+  // Restaurar estado al cargar
+  const restoredFilter = (sessionStorage.getItem("filter")) || "comedy-movies";
+  const restoredQuery = (sessionStorage.getItem("query")) || "";
 
-    filterSel.addEventListener("change", () => {
-      const q = searchInput.value.trim();
-      history.replaceState({}, "", `/?filter=${filterSel.value}&query=${q}`);
-      fetchAndRender({ filter: filterSel.value, query: q });
-    });
+  // Aplicar al DOM
+  filterSel.value = restoredFilter;
+  searchInput.value = restoredQuery;
 
-    // Ejecución inicial
-    fetchAndRender({ filter: initialFilter, query: initialQuery });
+  // Cargar datos iniciales desde cliente (restaurando lo que había en sessionStorage)
+  fetchAndRender({ filter: restoredFilter, query: restoredQuery });
+
+  // Event listeners
+  searchBtn?.addEventListener("click", () => {
+    const q = searchInput.value.trim();
+    saveState();
+    fetchAndRender({ filter: filterSel.value, query: q });
+  });
+
+  searchInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      searchBtn.click();
+    }
+  });
+
+  filterSel?.addEventListener("change", () => {
+    const q = searchInput.value.trim();
+    saveState();
+    fetchAndRender({ filter: filterSel.value, query: q });
   });
 </script>
 
@@ -208,9 +183,8 @@ const initialMovies = await getComedyMovies();
 
 .filters select { background:#000; color:var(--yellow); border:2px solid var(--yellow); padding:.5rem .9rem; border-radius:12px; }
 
-.status { color: #ddd; text-align:center; margin-bottom:1rem; min-height:2.2rem; }
+.status { color: #ddd; text-align:center; margin-bottom:1rem; min-height:1.2rem; }
 
-/* grid y cards (igual que antes) */
 .movies-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -219,13 +193,6 @@ const initialMovies = await getComedyMovies();
 @media (max-width:1200px) { .movies-grid { grid-template-columns: repeat(3,1fr); } }
 @media (max-width:900px) { .movies-grid { grid-template-columns: repeat(2,1fr); } }
 @media (max-width:600px) { .movies-grid { grid-template-columns: 1fr; } }
-</style>
 
-<style is:global>
-.card { display:flex; flex-direction:column; background:#000; color:#fff; border-radius:12px; overflow:hidden; text-decoration:none; transition:transform .25s; }
-.card-img, .card img { width:100%; height:340px; object-fit:cover; display:block; }
-.card-info { padding:.8rem; text-align:center; }
-.title{ color: #ffea00; font-weight:700; }
-.rating{ color:#ddd; }
-.overview{ color:#aaa; font-size:.85rem; line-height:1.2; max-height:3.6em; overflow:hidden; }
+/* Nota: las clases .card y sus hijos ya están en Layout.astro (global) */
 </style>

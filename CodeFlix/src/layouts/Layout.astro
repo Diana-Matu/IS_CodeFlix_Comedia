@@ -1,8 +1,7 @@
 ---
 import Header from "../components/Header.astro";
-// import { ClientRouter } from "astro:transitions";
+import { ClientRouter } from "astro:transitions";
 ---
-
 <!doctype html>
 <html lang="en">
   <head>
@@ -11,25 +10,56 @@ import Header from "../components/Header.astro";
     <link rel="icon" type="image/svg+xml" href="/movieicon.svg" />
     <meta name="generator" content={Astro.generator} />
     <title>CodeFlix :D</title>
-
-    <!-- Transiciones entre páginas -->
-    <!-- <ClientRouter transition:name="fade" /> -->
+    <ClientRouter transition:name="fade"/>
   </head>
 
-  <body class="layout-body">
-    <!-- Header global -->
+  <body class="min-h-screen pb-32">
     <Header />
-
-    <!-- Contenido dinámico -->
     <main class="max-w-5xl px-4 m-auto page">
       <slot />
-      <!-- <Astro.Scripts /> -->
     </main>
   </body>
 </html>
 
 <style is:global>
-  /* === CARD ESTILOS ORIGINALES — GLOBAL === 
+  html, body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #0a0a09;
+    font-family: system-ui, sans-serif;
+    color: #ffea00;
+  }
+
+  .page { animation: fade-in 0.6s ease forwards; }
+
+  [data-astro-transition="fade"] { opacity: 0; transition: opacity 0.5s ease; }
+  [data-astro-transition="fade"][data-astro-transition-state="visible"] { opacity: 1; }
+
+  body { display:flex; flex-direction:column; align-items:center; text-align:center; }
+
+  h1,h2,h3,h4,h5 { color: #ffea00; }
+  p { color: #dddb5b; }
+
+  .grid { place-items:center; }
+
+  button {
+    background-color: #ffea00;
+    color: #000;
+    border: none;
+    border-radius: 9999px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 0 10px #ffea00;
+    transition: all 0.3s ease;
+  }
+  button:hover { background-color: #ffee33; transform: scale(1.05); }
+
+  @keyframes fade-in { from { opacity:0; transform:translateY(15px);} to { opacity:1; transform:translateY(0);} }
+
+  /* --- GLOBAL CARD STYLES (unificadas para SSR + client render) --- */
   .card {
     display: flex;
     flex-direction: column;
@@ -40,45 +70,13 @@ import Header from "../components/Header.astro";
     text-decoration: none;
     transition: transform .25s, box-shadow .25s;
   }
-
   .card:hover {
     transform: scale(1.06);
     box-shadow: 0 0 15px 6px #ffea00;
   }
-
-  .card-img img,
-  .card img {
-    width: 100%;
-    height: 340px;
-    object-fit: cover;
-    display: block;
-  }
-
-  .card-info {
-    padding: 0.8rem;
-    text-align: center;
-  }
-
-  .card-info .title {
-    color: #ffea00;
-    font-size: 1.05rem;
-    font-weight: 700;
-    margin: 0.25rem 0;
-  }
-
-  .card-info .rating {
-    color: #ddd;
-    margin: 0.25rem 0;
-  }
-
-  .card-info .overview {
-    color: #aaa;
-    font-size: .85rem;
-    line-height: 1.2;
-    max-height: 3.6em;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  */
+  .card .card-img img { width: 100%; height: 340px; object-fit: cover; display:block; }
+  .card .card-info { padding: 0.8rem; text-align: center; }
+  .card .title { color: #ffea00; font-size: 1.05rem; font-weight: 700; margin: 0.25rem 0; }
+  .card .rating { color: #ddd; margin: 0.25rem 0; }
+  .card .overview { color: #aaa; font-size: .85rem; line-height: 1.2; max-height: 3.6em; overflow: hidden; text-overflow: ellipsis; }
 </style>
-
