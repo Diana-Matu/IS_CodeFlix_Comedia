@@ -18,6 +18,11 @@ import { ClientRouter } from "astro:transitions";
     <main class="max-w-5xl px-4 m-auto page">
       <slot />
     </main>
+    <footer class="global-footer">
+      <p class="brand">CODEFLIX</p>
+      <p class="subtitle">La mejor plataforma de películas y series</p>
+      <p class="copy">© 2025 CodeFlix — Todos los derechos reservados</p>
+    </footer>
   </body>
 </html>
 
@@ -38,6 +43,35 @@ import { ClientRouter } from "astro:transitions";
   [data-astro-transition="fade"][data-astro-transition-state="visible"] { opacity: 1; }
 
   body { display:flex; flex-direction:column; align-items:center; text-align:center; }
+
+  .global-footer {
+    width: 100%;
+    margin-top: 4rem;
+    padding: 2rem 0;
+    background: #000;
+    border-top: 2px solid #ffea00;
+    box-shadow: 0 -2px 15px rgba(255, 234, 0, 0.2);
+    text-align: center;
+  }
+
+  .global-footer .brand {
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    color: #ffea00;
+  }
+
+  .global-footer .subtitle {
+    color: #dcdcdc;
+    margin-top: 0.3rem;
+    font-size: 1rem;
+  }
+
+  .global-footer .copy {
+    color: #888;
+    font-size: 0.85rem;
+    margin-top: 0.4rem;
+  }
 
   h1,h2,h3,h4,h5 { color: #ffea00; }
   p { color: #dddb5b; }
