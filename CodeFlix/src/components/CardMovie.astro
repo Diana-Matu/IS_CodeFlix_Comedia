@@ -1,5 +1,4 @@
 ---
-// src/components/CardMovie.astro
 interface Movie {
   id: number;
   title?: string;
@@ -11,16 +10,23 @@ interface Movie {
   overview?: string;
 }
 
-const { movie } = Astro.props as { movie: Movie };
+const { movie, filter = "comedy-movies", query = "" } = Astro.props;
+
 const title = movie.title ?? movie.name ?? "Untitled";
 const date = movie.release_date ?? movie.first_air_date ?? "";
 ---
 
-
-<a href={`/movies/${movie.id}`} class="card">
+<a 
+  href={`/movies/${movie.id}?filter=${filter}&query=${query}`}
+  class="card"
+>
   <div class="card-img">
     <img
-      src={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : "https://via.placeholder.com/500x750?text=No+Image"}
+      src={
+        movie.poster_path
+          ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+          : "https://via.placeholder.com/500x750?text=No+Image"
+      }
       alt={title}
       loading="lazy"
     />
@@ -33,21 +39,5 @@ const date = movie.release_date ?? movie.first_air_date ?? "";
   </header>
 </a>
 
-<style>
-.card {
-  display: flex;
-  flex-direction: column;
-  background-color: #000;
-  color: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  text-decoration: none;
-  transition: transform .25s, box-shadow .25s;
-}
-.card:hover { transform: scale(1.06); box-shadow: 0 0 15px 6px #ffea00; }
-.card-img img { width: 100%; height: 340px; object-fit: cover; display: block; }
-.card-info { padding: 0.8rem; text-align: center; }
-.title { color: #ffea00; font-size: 1.05rem; font-weight: 700; margin: 0.25rem 0; }
-.rating { color: #ddd; margin: 0.25rem 0; }
-.overview { color: #aaa; font-size: .85rem; line-height: 1.2; max-height: 3.6em; overflow: hidden; text-overflow: ellipsis; }
-</style>
+<!-- Ya NO incluimos estilos scoped aquí.
+     Ahora están en Movies.astro como estilos globales -->

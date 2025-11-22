@@ -1,4 +1,5 @@
 // src/services/movies.ts
+
 export type Movie = {
   id: number;
   title?: string;
@@ -15,25 +16,42 @@ const API_URL = "https://api.themoviedb.org/3";
 const TOKEN = import.meta.env.TMDB_ACCESS_TOKEN;
 
 /**
- * Devuelve películas de comedia (discover movie with genre 35)
+ * Obtener lista de películas de comedia (SSR inicial)
  */
 export async function getComedyMovies(): Promise<Movie[]> {
-  const res = await fetch(`${API_URL}/discover/movie?with_genres=35&language=en-US&page=1`, {
-    headers: { Authorization: `Bearer ${TOKEN}` },
-  });
-  if (!res.ok) throw new Error(`TMDB error ${res.status}`);
+  const res = await fetch(
+    `${API_URL}/discover/movie?with_genres=35&language=en-US&page=1`,
+    { headers: { Authorization: `Bearer ${TOKEN}` } }
+  );
+
+  if (!res.ok) {
+    console.error(`TMDB error ${res.status} in getComedyMovies`);
+    return [];
+  }
+
   const data = await res.json();
-  return data.results || [];
+  return data?.results ?? [];
 }
 
 /**
- * Opcional: obtener detalle por id (puedes usarlo en /pages/movies/[id].astro)
+ * Obtener detalle de una película por ID
+ * Compatible con pages/movies/[id].astro sin getStaticPaths
  */
-export async function getMovieById(id: string | number) {
-  const res = await fetch(`${API_URL}/movie/${id}?language=en-US`, {
-    headers: { Authorization: `Bearer ${TOKEN}` },
-  });
-  if (!res.ok) throw new Error(`TMDB error ${res.status}`);
+export async function getMovieById(id: string | number): Promise<Movie | null> {
+  if (!id) {
+    console.error("getMovieById called without ID");
+    return null;
+  }
+
+  const res = await fetch(
+    `${API_URL}/movie/${id}?language=en-US`,
+    { headers: { Authorization: `Bearer ${TOKEN}` } }
+  );
+
+  if (!res.ok) {
+    console.error(`TMDB error ${res.status} in getMovieById(${id})`);
+    return null;
+  }
+
   return res.json();
 }
-

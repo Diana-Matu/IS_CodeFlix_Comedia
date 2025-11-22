@@ -1,191 +1,189 @@
 ---
-import { getComedyMovies, getComedyMoviesById } from "../../services/movies";
-import { ClientRouter } from "astro:transitions";
+import { getMovieById } from "../../services/movies";
 
-export async function getStaticPaths() {
-  const movies = await getComedyMovies();
+export const prerender = false;
 
-  return movies.map((movie) => ({
-    params: { id: movie.id.toString() },
-    props: { movie },
-  }));
+const id = Astro.params.id;
+
+if (!id) {
+  throw new Error("ID no proporcionado en la URL.");
 }
 
-const { movie } = Astro.props;
+const movie = await getMovieById(id);
+
+const filter = Astro.url.searchParams.get("filter") ?? "";
+const query = Astro.url.searchParams.get("query") ?? "";
 ---
+
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <title>{movie ? movie.title : `Movie ${Id}`}</title>
+    <title>{movie?.title ?? movie?.name ?? "Película"}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <style>
+      body {
+        background: #0a0a09;
+        color: #fff;
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+
+      .detail {
+        padding: 2rem;
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      .back-btn {
+        background: #ffea00;
+        color: #000;
+        font-weight: 700;
+        border: none;
+        padding: 0.6rem 1.2rem;
+        border-radius: 12px;
+        cursor: pointer;
+        margin-bottom: 1rem;
+      }
+
+      .content {
+        display: flex;
+        gap: 2rem;
+        background: #111;
+        padding: 1.5rem;
+        border-radius: 12px;
+      }
+
+      .poster {
+        width: 300px;
+        height: 450px;
+        object-fit: cover;
+        border-radius: 12px;
+      }
+
+      .info {
+        flex: 1;
+      }
+
+      .rating {
+        color: #ddd;
+        margin: 0.5rem 0;
+      }
+
+      .overview {
+        color: #aaa;
+        line-height: 1.5;
+      }
+
+      @media (max-width: 800px) {
+        .content {
+          flex-direction: column;
+          align-items: center;
+          text-align: center;
+        }
+
+        .poster {
+          width: 100%;
+          max-width: 350px;
+          height: auto;
+        }
+
+        .info {
+          text-align: center;
+        }
+      }
+    </style>
+
+    <!-- === Global Card Style (same as Movies.astro) === -->
+    <style is:global>
+      .card {
+        display: flex;
+        flex-direction: column;
+        background-color: #000;
+        color: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        text-decoration: none;
+        transition: transform 0.25s, box-shadow 0.25s;
+      }
+
+      .card:hover {
+        transform: scale(1.06);
+        box-shadow: 0 0 15px 6px #ffea00;
+      }
+
+      .card-img,
+      .card img {
+        width: 100%;
+        height: 340px;
+        object-fit: cover;
+        display: block;
+      }
+
+      .card-info {
+        padding: 0.8rem;
+        text-align: center;
+      }
+
+      .card-info .title {
+        color: #ffea00;
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0.25rem 0;
+      }
+
+      .card-info .rating {
+        color: #ddd;
+        margin: 0.25rem 0;
+      }
+
+      .card-info .overview {
+        color: #aaa;
+        font-size: 0.85rem;
+        line-height: 1.2;
+        max-height: 3.6em;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    </style>
   </head>
 
-  <body class="body">
+  <body>
     <main class="detail">
       <button class="back-btn" onclick="history.back()">← Volver</button>
 
       {movie ? (
         <section class="content">
-          
-            <img
-              src={
-                movie.poster_path
-                  ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-                  : "https://via.placeholder.com/500x750?text=No+Image"
-              }
-              alt={movie.title}
-              class="poster"
-            />
-          
+          <img
+            class="poster"
+            src={
+              movie.poster_path
+                ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+                : "https://via.placeholder.com/500x750?text=No+Image"
+            }
+            alt={movie.title ?? movie.name}
+          />
 
           <div class="info">
-            <h1>{movie.title}</h1>
+            <h1>{movie.title ?? movie.name}</h1>
+
             <p class="rating">
-              ⭐ {movie.vote_average} • {movie.release_date}
+              ⭐ {movie.vote_average ?? "—"} • {movie.release_date ?? movie.first_air_date ?? ""}
             </p>
+
             <p class="overview">{movie.overview}</p>
           </div>
         </section>
-        
       ) : (
-        <p class="not-found">No se encontró la película — revisa la consola.</p>
+        <p class="not-found">No se encontró la película. Ver consola.</p>
       )}
     </main>
 
-    <footer class="footer">
+    <footer style="text-align:center; padding:2rem; color:#aaa;">
       <p class="brand">CODEFLIX</p>
       <p>Disfruta lo mejor del cine con tecnología y estilo</p>
       <p class="copy">© 2025 Codeflix. Todos los derechos reservados.</p>
     </footer>
   </body>
 </html>
-
-<style>
-  .body {
-    background: #0a0a09;
-    color: #fff;
-    font-family: system-ui, sans-serif;
-    margin: 0;
-    padding: 0;
-    animation: fade-in 0.6s ease forwards;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-  }
-
-  .detail {
-    flex: 1;
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1.5rem;
-  }
-
-  .back-btn {
-    align-self: flex-start;
-    margin-left: 2rem;
-    background: none;
-    border: 2px solid #ffea00;
-    color: #ffea00;
-    border-radius: 50px;
-    padding: 0.6rem 1.5rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-
-  .back-btn:hover {
-    background-color: #ffea00;
-    color: #000;
-    transform: scale(1.05);
-  }
-
-  .content {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 2.5rem;
-    max-width: 1000px;
-    flex-wrap: wrap;
-    text-align: center;
-  }
-
-  .poster {
-    width: 260px;
-    border-radius: 12px;
-    box-shadow: 0 0 25px #ffea00;
-    transition: transform 0.6s ease, box-shadow 0.6s ease;
-  }
-
-  .poster:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 35px #ffea00;
-  }
-
-  .info {
-    max-width: 550px;
-  }
-
-  h1 {
-    color: #ffea00;
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .rating {
-    color: #ccc;
-    margin-bottom: 1rem;
-    font-size: 1.1rem;
-  }
-
-  .overview {
-    color: #ddd;
-    line-height: 1.5;
-    font-size: 1rem;
-  }
-
-  .id {
-    color: #aaa;
-    margin-top: 1rem;
-    font-size: 0.9rem;
-  }
-
-  .not-found {
-    color: #ffb86b;
-    margin-top: 2rem;
-  }
-
-  .footer {
-    text-align: center;
-    padding: 1.5rem 0;
-    border-top: 1px solid #ffea00;
-    background: #000;
-    font-size: 0.9rem;
-  }
-
-  .footer .brand {
-    color: #ffea00;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    font-size: 1.1rem;
-  }
-
-  .footer .copy {
-    color: #777;
-    font-size: 0.75rem;
-    margin-top: 0.4rem;
-  }
-
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-      transform: translateY(15px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-</style>
