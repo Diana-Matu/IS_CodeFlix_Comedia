@@ -1,28 +1,24 @@
 import type { APIRoute } from "astro";
 
-export const prerender = false; // 🔥 Esto fuerza modo runtime (con headers y query reales)
+export const prerender = false; // Runtime API
 
 const API_KEY = "72a08ef93943ef7f2719f4d0bfb1a7cf";
 const BASE_URL = "https://api.themoviedb.org/3";
 
 export const GET: APIRoute = async ({ request }) => {
-  // Parse request URL safely
-    // 🧩 SOLUCIÓN COMPLETA: obtener parámetros incluso si Astro corta la query string
   let searchParams: URLSearchParams;
 
   try {
-    // 1️⃣ Intentar construir desde la URL completa
     const fullUrl = new URL(request.url, 'http://localhost:4321');
+
     if ([...fullUrl.searchParams.keys()].length > 0) {
       searchParams = fullUrl.searchParams;
     } else {
-      // 2️⃣ Si no hay params, intentar leer de la cabecera referer
-      const ref = request.headers.get('referer') || '';
-      const queryPart = ref.includes('?') ? ref.split('?')[1] : '';
+      const ref = request.headers.get('referer') || "";
+      const queryPart = ref.includes("?") ? ref.split("?")[1] : "";
       searchParams = new URLSearchParams(queryPart);
     }
   } catch {
-    // 3️⃣ Fallback: sin errores, pero sin datos
     searchParams = new URLSearchParams();
   }
 
@@ -33,7 +29,6 @@ export const GET: APIRoute = async ({ request }) => {
   const query = rawQuery.trim();
 
   console.log("🎯 Backend recibió filter =", JSON.stringify(filter), "query =", JSON.stringify(query));
-  console.log("Parsed searchParams:", Object.fromEntries(searchParams.entries()));
 
   let endpoint = "";
   let params = new URLSearchParams({
@@ -43,21 +38,21 @@ export const GET: APIRoute = async ({ request }) => {
     "vote_count.gte": "10",
   });
 
-  // 🔍 1. Si hay búsqueda, priorizamos eso
+  // 🔍 1. Si hay búsqueda, priorizar búsqueda
   if (query) {
     endpoint = `${BASE_URL}/search/multi`;
     params.set("query", query);
   } else {
-    // 🔍 2. Si no hay búsqueda, filtramos según tipo
+    // 🔍 2. Si no hay búsqueda, usar filtro
     switch (filter) {
       case "comedy-movies":
         endpoint = `${BASE_URL}/discover/movie`;
-        params.set("with_genres", "35"); // 35 = Comedia
+        params.set("with_genres", "35");
         break;
 
       case "comedy-series":
         endpoint = `${BASE_URL}/discover/tv`;
-        params.set("with_genres", "35"); // 35 = Comedia
+        params.set("with_genres", "35");
         break;
 
       case "movies-all":
@@ -74,15 +69,16 @@ export const GET: APIRoute = async ({ request }) => {
         endpoint = `${BASE_URL}/trending/all/week`;
         params.delete("with_genres");
         params.delete("sort_by");
+        break;     // 🔥🔥🔥 SOLUCIÓN DEL PROBLEMA
+
       default:
-        console.warn("[API] filter desconocido, usando 'comedy-movies' por defecto. rawFilter:", rawFilter);
+        console.warn("[API] Filtro desconocido, usando comedia por defecto.");
         endpoint = `${BASE_URL}/discover/movie`;
-        params.set("with_genres", "35"); // 35 = Comedia
+        params.set("with_genres", "35");
         break;
     }
   }
 
-  // 👀 Enviamos el endpoint usado en los headers para depuración
   const finalUrl = `${endpoint}?${params.toString()}`;
   console.log(`[API] Fetching TMDb endpoint: ${finalUrl}`);
 
@@ -90,15 +86,12 @@ export const GET: APIRoute = async ({ request }) => {
     const response = await fetch(finalUrl);
     const data = await response.json();
 
-    // TMDb puede devolver resultados bajo "results"
-    const results = data.results || [];
-
-    return new Response(JSON.stringify(results), {
+    return new Response(JSON.stringify(data.results || []), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
         "X-TMDB-ENDPOINT": finalUrl,
-        "X-RECEIVED-FILTER": filter, // cabecera para debug adicional
+        "X-RECEIVED-FILTER": filter,
       },
     });
   } catch (err) {
@@ -108,3 +101,4 @@ export const GET: APIRoute = async ({ request }) => {
     });
   }
 };
+

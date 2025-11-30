@@ -2,7 +2,6 @@
 import Header from "../components/Header.astro";
 import { ClientRouter } from "astro:transitions";
 ---
-
 <!doctype html>
 <html lang="en">
   <head>
@@ -15,62 +14,70 @@ import { ClientRouter } from "astro:transitions";
   </head>
 
   <body class="min-h-screen pb-32">
-    <!--Lo q vaya aquí antes del slot, se verá en todas las páginas-->
     <Header />
-    <main class="max-w-5xl px-4 m-auto">
+    <main class="max-w-5xl px-4 m-auto page">
       <slot />
     </main>
+    <footer class="global-footer">
+      <p class="brand">CODEFLIX</p>
+      <p class="subtitle">La mejor plataforma de películas y series</p>
+      <p class="copy">© 2025 CodeFlix — Todos los derechos reservados</p>
+    </footer>
   </body>
 </html>
 
 <style is:global>
-  html,
-  body {
+  html, body {
     height: 100%;
     width: 100%;
     margin: 0;
     padding: 0;
-    background-color: #0a0a09; 
+    background-color: #0a0a09;
     font-family: system-ui, sans-serif;
     color: #ffea00;
   }
 
-  .page {
-    animation: fade-in 0.6s ease forwards;
-  }
+  .page { animation: fade-in 0.6s ease forwards; }
 
-  [data-astro-transition="fade"] {
-    opacity: 0;
-    transition: opacity 0.5s ease;
-  }
+  [data-astro-transition="fade"] { opacity: 0; transition: opacity 0.5s ease; }
+  [data-astro-transition="fade"][data-astro-transition-state="visible"] { opacity: 1; }
 
-  [data-astro-transition="fade"][data-astro-transition-state="visible"] {
-    opacity: 1;
-  }
+  body { display:flex; flex-direction:column; align-items:center; text-align:center; }
 
-
-  body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  .global-footer {
+    width: 100%;
+    margin-top: 4rem;
+    padding: 2rem 0;
+    background: #000;
+    border-top: 2px solid #ffea00;
+    box-shadow: 0 -2px 15px rgba(255, 234, 0, 0.2);
     text-align: center;
   }
 
-  /* Texto base */
-  h1, h2, h3, h4, h5 {
+  .global-footer .brand {
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: 1.5px;
     color: #ffea00;
   }
 
-  p {
-    color: #dddb5b;
+  .global-footer .subtitle {
+    color: #dcdcdc;
+    margin-top: 0.3rem;
+    font-size: 1rem;
   }
 
-  /* Grid general */
-  .grid {
-    place-items: center;
+  .global-footer .copy {
+    color: #888;
+    font-size: 0.85rem;
+    margin-top: 0.4rem;
   }
 
-  /* Botones amarillos */
+  h1,h2,h3,h4,h5 { color: #ffea00; }
+  p { color: #dddb5b; }
+
+  .grid { place-items:center; }
+
   button {
     background-color: #ffea00;
     color: #000;
@@ -82,16 +89,28 @@ import { ClientRouter } from "astro:transitions";
     box-shadow: 0 0 10px #ffea00;
     transition: all 0.3s ease;
   }
+  button:hover { background-color: #ffee33; transform: scale(1.05); }
 
-  button:hover {
-    background-color: #ffee33;
-    transform: scale(1.05);
-  }
+  @keyframes fade-in { from { opacity:0; transform:translateY(15px);} to { opacity:1; transform:translateY(0);} }
 
-  @keyframes fade-in {
-    from { opacity: 0; transform: translateY(15px); }
-    to { opacity: 1; transform: translateY(0); }
+  /* --- GLOBAL CARD STYLES (unificadas para SSR + client render) --- */
+  .card {
+    display: flex;
+    flex-direction: column;
+    background-color: #000;
+    color: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    text-decoration: none;
+    transition: transform .25s, box-shadow .25s;
   }
+  .card:hover {
+    transform: scale(1.06);
+    box-shadow: 0 0 15px 6px #ffea00;
+  }
+  .card .card-img img { width: 100%; height: 340px; object-fit: cover; display:block; }
+  .card .card-info { padding: 0.8rem; text-align: center; }
+  .card .title { color: #ffea00; font-size: 1.05rem; font-weight: 700; margin: 0.25rem 0; }
+  .card .rating { color: #ddd; margin: 0.25rem 0; }
+  .card .overview { color: #aaa; font-size: .85rem; line-height: 1.2; max-height: 3.6em; overflow: hidden; text-overflow: ellipsis; }
 </style>
-
-

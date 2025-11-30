@@ -1,11 +1,10 @@
 ---
 // src/components/Movies.astro
 import CardMovie from "./CardMovie.astro";
-import { getComedyMovies } from "../services/movies";
-
-const initialMovies = await getComedyMovies(); // SSR: muestra películas de comedia por defecto
+// Nota: no hacemos fetch de comedia en SSR, dejamos que el cliente cargue el dato y restaure estado
+import type { Movie } from "../services/movies";
+const initialMovies: Movie[] = []; // SSR vacío para evitar "sesgo comedia"
 ---
-
 
 <section class="movies-section">
   <div class="container">
@@ -18,7 +17,7 @@ const initialMovies = await getComedyMovies(); // SSR: muestra películas de com
 
       <div class="filters">
         <select id="filter-select" aria-label="Filtros">
-          <option value="comedy-movies" selected>🎬 Películas de comedia</option>
+          <option value="comedy-movies">🎬 Películas de comedia</option>
           <option value="comedy-series">📺 Series de comedia</option>
           <option value="all">🌍 Todos los géneros</option>
           <option value="movies-all">🎞️ Películas (todos los géneros)</option>
@@ -30,7 +29,8 @@ const initialMovies = await getComedyMovies(); // SSR: muestra películas de com
     <div id="status" class="status" role="status" aria-live="polite"></div>
 
     <div id="movies-grid" class="movies-grid">
-      <!-- SSR rendering -->
+      <!-- Si quieres mostrar algo SSR puedes mapear initialMovies aquí,
+           ahora está vacío para dejar lógica al cliente -->
       {initialMovies.map(movie => <CardMovie movie={movie} />)}
     </div>
 
@@ -46,7 +46,6 @@ const initialMovies = await getComedyMovies(); // SSR: muestra películas de com
   const searchBtn = document.getElementById("search-button");
   const filterSel = document.getElementById("filter-select");
 
-  //debug
   if (!moviesGrid || !statusEl || !searchInput || !searchBtn || !filterSel) {
     console.error("Movies script: alguno de los elementos no existe.", { moviesGrid, statusEl, searchInput, searchBtn, filterSel });
   }
@@ -59,15 +58,12 @@ const initialMovies = await getComedyMovies(); // SSR: muestra películas de com
     setStatus("Cargando...");
     try {
       const qs = new URLSearchParams();
-      // Siempre enviamos el filtro (aunque esté vacío) para claridad en servidor
       qs.set("filter", filter ?? "");
       if (query) qs.set("query", query);
 
-      // DEBUG: mostrar lo que vamos a pedir
-      console.log("→ Fetching /api/movies with QS:", qs.toString(), " (filterSel.value=", filterSel?.value, ")");
+      console.log("→ Fetching /api/movies with QS:", qs.toString());
 
       const res = await fetch(`/api/movies?${qs.toString()}`);
-      // LOG: mostrar endpoint que el backend usó
       const usedEndpoint = res.headers.get("X-TMDB-ENDPOINT");
       console.log("Response X-TMDB-ENDPOINT:", usedEndpoint);
 
@@ -78,15 +74,10 @@ const initialMovies = await getComedyMovies(); // SSR: muestra películas de com
       }
       const data = await res.json();
 
-      // Mostrar en consola
       console.log("API returned", Array.isArray(data) ? data.length : "?", "items; sample ids:", (Array.isArray(data) ? data.slice(0,3).map(x=>x.id) : data));
 
-      renderMovies(data);
+      renderMovies(Array.isArray(data) ? data : []);
       setStatus(data.length ? "" : "No se encontraron resultados.");
-
-      // opcional: mostrar en UI el endpoint consultado para depuración (temporal)
-      // statusEl.textContent = usedEndpoint ?? statusEl.textContent;
-
     } catch (err) {
       console.error(err);
       setStatus("Error cargando películas.");
@@ -95,6 +86,7 @@ const initialMovies = await getComedyMovies(); // SSR: muestra películas de com
 
   function clearGrid() { if (moviesGrid) moviesGrid.innerHTML = ""; }
 
+  // Unificamos el DOM que se genera con las clases del CSS global
   function renderMovies(movies) {
     if (!moviesGrid) return;
     clearGrid();
@@ -104,16 +96,17 @@ const initialMovies = await getComedyMovies(); // SSR: muestra películas de com
       link.className = "card";
       link.href = `/movies/${m.id}`;
 
+      // Card image wrapper
+      const imgWrap = document.createElement("div");
+      imgWrap.className = "card-img";
       const img = document.createElement("img");
       img.loading = "lazy";
       img.alt = m.title ?? m.name ?? "Untitled";
       img.src = m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : "https://via.placeholder.com/500x750?text=No+Image";
-      img.style.width = "100%";
-      img.style.height = "340px";
-      img.style.objectFit = "cover";
-      link.appendChild(img);
+      imgWrap.appendChild(img);
+      link.appendChild(imgWrap);
 
-      const header = document.createElement("div");
+      const header = document.createElement("header");
       header.className = "card-info";
 
       const h2 = document.createElement("h2");
@@ -138,8 +131,29 @@ const initialMovies = await getComedyMovies(); // SSR: muestra películas de com
     }
   }
 
+  // --- Persistencia simple: sessionStorage ---
+  function saveState() {
+    try {
+      sessionStorage.setItem("filter", filterSel.value);
+      sessionStorage.setItem("query", searchInput.value.trim());
+    } catch (e) { /* ignore */ }
+  }
+
+  // Restaurar estado al cargar
+  const restoredFilter = (sessionStorage.getItem("filter")) || "comedy-movies";
+  const restoredQuery = (sessionStorage.getItem("query")) || "";
+
+  // Aplicar al DOM
+  filterSel.value = restoredFilter;
+  searchInput.value = restoredQuery;
+
+  // Cargar datos iniciales desde cliente (restaurando lo que había en sessionStorage)
+  fetchAndRender({ filter: restoredFilter, query: restoredQuery });
+
+  // Event listeners
   searchBtn?.addEventListener("click", () => {
     const q = searchInput.value.trim();
+    saveState();
     fetchAndRender({ filter: filterSel.value, query: q });
   });
 
@@ -152,18 +166,12 @@ const initialMovies = await getComedyMovies(); // SSR: muestra películas de com
 
   filterSel?.addEventListener("change", () => {
     const q = searchInput.value.trim();
-    // DEBUG: registramos el valor actual del select
-    console.log("Filter changed to:", filterSel.value);
+    saveState();
     fetchAndRender({ filter: filterSel.value, query: q });
   });
-
-  // OPTIONAL: call once on load to refresh client-side
-  // fetchAndRender({ filter: 'comedy-movies' });
 </script>
 
-
 <style>
-/* Styles local to this component */
 :root { --yellow: #ffea00; --bg: #0a0a09; --muted: #aaa; }
 .movies-section { background: var(--bg); color: var(--yellow); padding: 2rem 1rem; min-height: 60vh; }
 .container { max-width: 1200px; margin: 0 auto; }
@@ -175,10 +183,8 @@ const initialMovies = await getComedyMovies(); // SSR: muestra películas de com
 
 .filters select { background:#000; color:var(--yellow); border:2px solid var(--yellow); padding:.5rem .9rem; border-radius:12px; }
 
-/* status */
 .status { color: #ddd; text-align:center; margin-bottom:1rem; min-height:1.2rem; }
 
-/* grid */
 .movies-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -188,11 +194,5 @@ const initialMovies = await getComedyMovies(); // SSR: muestra películas de com
 @media (max-width:900px) { .movies-grid { grid-template-columns: repeat(2,1fr); } }
 @media (max-width:600px) { .movies-grid { grid-template-columns: 1fr; } }
 
-/* card (client-rendered) — same look as CardMovie.astro */
-.card { display:flex; flex-direction:column; background:#000; border-radius:12px; color:#fff; overflow:hidden; text-decoration:none; transition:transform .25s; }
-.card:hover { transform:scale(1.06); box-shadow: 0 0 15px 6px #ffea00; }
-.card-info { padding:.6rem; text-align:center; }
-.title { color: var(--yellow); font-weight:700; margin: .25rem 0; }
-.rating { color:#ccc; font-size:.95rem; margin: .15rem 0; }
-.overview { color: var(--muted); font-size:.85rem; line-height:1.2; max-height:3.6em; overflow:hidden; }
+/* Nota: las clases .card y sus hijos ya están en Layout.astro (global) */
 </style>
