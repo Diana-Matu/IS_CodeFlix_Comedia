@@ -6,4 +6,44 @@ import Layout from '../layouts/Layout.astro';
 
 <Layout>
   <Movies></Movies>
+
+  <section class="contact-cta">
+    <a href="/contact" class="btn-contact">CONTACTANOS</a>
+  </section>
 </Layout>
+
+<style>
+  /* Contenedor para centrar el botón y darle espacio */
+  .contact-cta {
+    display: flex;
+    justify-content: center; /* Centrado horizontal */
+    align-items: center;
+    padding: 4rem 0;         /* Espacio arriba y abajo para que no pegue con las pelis */
+    margin-top: 2rem;
+    border-top: 1px solid #222; /* Una línea sutil separadora (opcional) */
+  }
+
+  /* Estilo del Botón */
+  .btn-contact {
+    text-decoration: none;
+    background-color: transparent;
+    color: #EAB308;          /* Amarillo CodeFlix */
+    border: 2px solid #EAB308;
+    padding: 12px 40px;      /* Tamaño del botón */
+    font-size: 1.5rem;       /* Letra grande */
+    font-weight: bold;
+    border-radius: 50px;     /* Bordes muy redondos */
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  /* Animación al pasar el mouse */
+  .btn-contact:hover {
+    background-color: #EAB308; /* Se rellena de amarillo */
+    color: black;              /* Letras negras */
+    transform: scale(1.1);     /* Crece un poquito */
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(234, 179, 8, 0.4); /* Resplandor */
+  }
+</style>

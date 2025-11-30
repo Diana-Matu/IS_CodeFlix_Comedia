@@ -1,0 +1,166 @@
+---
+// src/pages/contacto.astro
+// No necesitamos JavaScript en el servidor para este ejemplo básico.
+---
+
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contacto - CodeFlix</title>
+</head>
+<body>
+    <nav class="navbar">
+      <div class="logo">= CodeFlix :D =</div>
+    </nav>
+
+    <main class="contact-container">
+        <h1>Contáctanos <span class="yellow-accent">:)</span></h1>
+        <p>¿Tienes alguna sugerencia de película o algún problema? Escríbenos.</p>
+
+        <form 
+            action="https://formspree.io/f/xkgdnwew" 
+            method="POST" 
+            class="contact-form"
+        >
+            <div class="form-group">
+                <label for="name">Tu Nombre</label>
+                <input type="text" id="name" name="name" required placeholder="Ej. Juan Escutia">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Tu Correo Electrónico</label>
+                <input type="email" id="email" name="_replyto" required placeholder="nombre@ejemplo.com">
+            </div>
+
+            <div class="form-group">
+                <label for="message">Mensaje</label>
+                <textarea id="message" name="message" rows="5" required placeholder="¿Qué nos quieres contar?"></textarea>
+            </div>
+
+            <button type="submit" class="submit-btn">Enviar Mensaje</button>
+        </form>
+    </main>
+</body>
+</html>
+
+<style>
+    /* --- Variables de color basadas en tu imagen --- */
+    :root {
+        --bg-dark: #0F0F0F;      /* Fondo principal muy oscuro */
+        --bg-input: #1A1A1A;     /* Fondo de los campos de texto */
+        --accent-yellow: #EAB308; /* El amarillo brillante de los botones/estrellas */
+        --text-white: #F3F4F6;   /* Texto blanco casi puro */
+        --text-gray: #9CA3AF;    /* Texto secundario */
+    }
+
+    body {
+        font-family: system-ui, -apple-system, sans-serif;
+        background-color: var(--bg-dark);
+        color: var(--text-white);
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    /* --- Estilos de Navegación Simple --- */
+    .navbar {
+        width: 100%;
+        padding: 1.5rem;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .logo {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--accent-yellow);
+        letter-spacing: 1px;
+    }
+
+    /* --- Contenedor Principal --- */
+    .contact-container {
+        width: 90%;
+        max-width: 500px; /* Mantiene el formulario compacto */
+        padding: 2rem;
+        text-align: center;
+    }
+
+    h1 {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .yellow-accent {
+        color: var(--accent-yellow);
+    }
+
+    p {
+        color: var(--text-gray);
+        margin-bottom: 2.5rem;
+    }
+
+    /* --- Estilos del Formulario --- */
+    .contact-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        text-align: left;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    label {
+        font-weight: 500;
+        font-size: 0.9rem;
+        margin-left: 5px;
+    }
+
+    /* Estilos de los Inputs y Textarea para que coincidan con la barra de búsqueda */
+    input, textarea {
+        background-color: var(--bg-input);
+        border: 2px solid transparent; /* Borde transparente por defecto */
+        border-radius: 12px; /* Bordes redondeados como en la imagen */
+        padding: 1rem;
+        color: var(--text-white);
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        outline: none;
+    }
+
+    /* Efecto al hacer clic en un input (se ilumina en amarillo) */
+    input:focus, textarea:focus {
+        border-color: var(--accent-yellow);
+        box-shadow: 0 0 10px rgba(234, 179, 8, 0.2);
+    }
+
+    /* Placeholder de color gris */
+    ::placeholder {
+        color: #525252;
+    }
+
+    /* --- Estilo del Botón de Enviar (igual al botón "Buscar") --- */
+    .submit-btn {
+        background-color: var(--accent-yellow);
+        color: #111; /* Texto oscuro para contraste */
+        border: none;
+        padding: 1rem;
+        font-size: 1.1rem;
+        font-weight: bold;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: transform 0.2s, background-color 0.2s;
+        margin-top: 1rem;
+    }
+
+    .submit-btn:hover {
+        background-color: #CA8A04; /* Un poco más oscuro al pasar el mouse */
+        transform: translateY(-2px); /* Pequeño efecto de elevación */
+    }
+</style>
