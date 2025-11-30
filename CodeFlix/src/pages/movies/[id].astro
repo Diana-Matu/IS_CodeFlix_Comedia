@@ -1,22 +1,49 @@
 ---
-import { getComedyMovies, getComedyMoviesById } from "../../services/movies";
-import { ClientRouter } from "astro:transitions";
+export const prerender = false;
 
-export async function getStaticPaths() {
-  const movies = await getComedyMovies();
+import { getMovieById } from "../../services/movies";
 
-  return movies.map((movie) => ({
-    params: { id: movie.id.toString() },
-    props: { movie },
-  }));
+const { id } = Astro.params;
+
+// Intentamos obtener el detalle (getMovieById maneja movie -> tv fallback)
+let movie = null;
+try {
+  if (!id) {
+    throw new Error("ID no proporcionado en la URL.");
+  }
+  movie = await getMovieById(id);
+} catch (err) {
+  console.error("Error fetching movie by id:", err);
+  movie = null;
 }
 
-const { movie } = Astro.props;
+// Detectar si es película o serie
+const isMovie = !!movie?.title;
+const isSeries = !!movie?.name && !movie?.title;
+
+// Elegir favicon según tipo
+const iconPath = isMovie
+  ? "/icons/movie-icon.svg"
+  : "/icons/series-icon.svg";
+
+// Elegir texto del título según tipo
+const titleText = isMovie
+  ? `${movie?.title}`
+  : `${movie?.name}`;
+
 ---
+
 <html lang="es">
   <head>
     <meta charset="utf-8" />
-    <title>{movie ? movie.title : `Movie ${Id}`}</title>
+    <!-- Título dinámico con ícono -->
+    <title>
+      {movie ? titleText : `Contenido ${id}`}
+    </title>
+
+    <!-- Favicon dinámico -->
+    <link rel="icon" type="image/svg+xml" href={iconPath} />
+    
     <meta name="viewport" content="width=device-width, initial-scale=1" />
   </head>
 
@@ -26,29 +53,20 @@ const { movie } = Astro.props;
 
       {movie ? (
         <section class="content">
-          
-            <img
-              src={
-                movie.poster_path
-                  ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-                  : "https://via.placeholder.com/500x750?text=No+Image"
-              }
-              alt={movie.title}
-              class="poster"
-            />
-          
+          <img
+            src={movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : "https://via.placeholder.com/500x750?text=No+Image"}
+            alt={movie.title ?? movie.name}
+            class="poster"
+          />
 
           <div class="info">
-            <h1>{movie.title}</h1>
-            <p class="rating">
-              ⭐ {movie.vote_average} • {movie.release_date}
-            </p>
+            <h1>{movie.title ?? movie.name}</h1>
+            <p class="rating">⭐ {movie.vote_average ?? "—"} • {movie.release_date ?? movie.first_air_date ?? ""}</p>
             <p class="overview">{movie.overview}</p>
           </div>
         </section>
-        
       ) : (
-        <p class="not-found">No se encontró la película — revisa la consola.</p>
+        <p class="not-found">No se encontró la película/serie — revisa la consola.</p>
       )}
     </main>
 
@@ -128,64 +146,14 @@ const { movie } = Astro.props;
     max-width: 550px;
   }
 
-  h1 {
-    color: #ffea00;
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
-  }
+  h1 { color: #ffea00; font-size: 2rem; margin-bottom: 0.5rem; }
+  .rating { color: #ccc; margin-bottom: 1rem; font-size: 1.1rem; }
+  .overview { color: #ddd; line-height: 1.5; font-size: 1rem; }
+  .not-found { color: #ffb86b; margin-top: 2rem; }
 
-  .rating {
-    color: #ccc;
-    margin-bottom: 1rem;
-    font-size: 1.1rem;
-  }
+  .footer { text-align:center; padding:1.5rem 0; border-top:1px solid #ffea00; background:#000; font-size:0.9rem; }
+  .footer .brand { color: #ffea00; font-weight:700; letter-spacing:1.5px; font-size:1.1rem; }
+  .footer .copy { color:#777; font-size:0.75rem; margin-top:0.4rem; }
 
-  .overview {
-    color: #ddd;
-    line-height: 1.5;
-    font-size: 1rem;
-  }
-
-  .id {
-    color: #aaa;
-    margin-top: 1rem;
-    font-size: 0.9rem;
-  }
-
-  .not-found {
-    color: #ffb86b;
-    margin-top: 2rem;
-  }
-
-  .footer {
-    text-align: center;
-    padding: 1.5rem 0;
-    border-top: 1px solid #ffea00;
-    background: #000;
-    font-size: 0.9rem;
-  }
-
-  .footer .brand {
-    color: #ffea00;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    font-size: 1.1rem;
-  }
-
-  .footer .copy {
-    color: #777;
-    font-size: 0.75rem;
-    margin-top: 0.4rem;
-  }
-
-  @keyframes fade-in {
-    from {
-      opacity: 0;
-      transform: translateY(15px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
+  @keyframes fade-in { from { opacity:0; transform: translateY(15px); } to { opacity:1; transform: translateY(0); } }
 </style>
