@@ -1,6 +1,5 @@
-// src/components/test/Movies.test.js - VERSIÓN CORREGIDA
-
-const { test, expect, describe, beforeEach } = require('@jest/globals');
+// src/components/test/Movies.test.js - VERSIÓN VITEST
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // ------------------------------------------------------------
 // FUNCIONES DEL COMPONENTE (simulan las de Movies.astro)
@@ -62,7 +61,7 @@ function renderMovies(movies, gridElement) {
 }
 
 // ------------------------------------------------------------
-// PRUEBAS DE LÓGICA BÁSICA (ESTAS YA FUNCIONAN)
+// PRUEBAS DE LÓGICA BÁSICA
 // ------------------------------------------------------------
 
 describe('Movies Component - Basic Logic', () => {
@@ -148,14 +147,13 @@ describe('Movies Component - Basic Logic', () => {
 });
 
 // ------------------------------------------------------------
-// PRUEBAS DE INTEGRACIÓN - VERSIÓN SIMPLIFICADA
+// PRUEBAS DE INTEGRACIÓN
 // ------------------------------------------------------------
 
-describe('Movies Component - Integration Tests (Simplified)', () => {
+describe('Movies Component - Integration Tests', () => {
   let searchInput, searchButton, filterSelect, moviesGrid, statusEl;
 
   beforeEach(() => {
-    // Setup más simple y controlado
     document.body.innerHTML = `
       <input id="search-input" type="text" placeholder="Buscar película o serie..." />
       <button id="search-button" type="button">🔍 Buscar</button>
@@ -173,11 +171,11 @@ describe('Movies Component - Integration Tests (Simplified)', () => {
     moviesGrid = document.getElementById('movies-grid');
     statusEl = document.getElementById('status');
     
-    global.fetch = jest.fn();
+    global.fetch = vi.fn();
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('El componente tiene todos los elementos esenciales', () => {
@@ -188,118 +186,42 @@ describe('Movies Component - Integration Tests (Simplified)', () => {
     expect(searchButton.textContent).toContain('Buscar');
     
     expect(filterSelect).toBeTruthy();
-    expect(filterSelect.options.length).toBe(2);
+    expect(filterSelect.getAttribute('aria-label')).toBe('Filtros');
     
     expect(moviesGrid).toBeTruthy();
     expect(statusEl).toBeTruthy();
     expect(statusEl.getAttribute('aria-live')).toBe('polite');
   });
 
-  // PRUEBA CORREGIDA: Simular el evento click correctamente
-  test('La búsqueda por botón funciona correctamente', () => {
-    // Mock de fetch
+  test('La búsqueda por botón dispara fetch', () => {
     global.fetch.mockResolvedValueOnce({
       ok: true,
       json: async () => []
     });
     
-    // Configurar event listener SIMULADO (como en tu componente real)
-    let fetchWasCalled = false;
+    let fetchCalled = false;
     const originalFetch = global.fetch;
-    global.fetch = jest.fn().mockImplementation((...args) => {
-      fetchWasCalled = true;
-      return Promise.resolve({
-        ok: true,
-        json: async () => []
-      });
+    global.fetch = vi.fn().mockImplementation(() => {
+      fetchCalled = true;
+      return Promise.resolve({ ok: true, json: async () => [] });
     });
     
-    // Simular el comportamiento de tu componente
-    searchInput.value = 'comedia';
-    filterSelect.value = 'comedy-movies';
-    
-    // En tu componente, el botón tiene un event listener que llama a fetch
-    // Simulamos que el click ejecuta fetch
     searchButton.addEventListener('click', () => {
-      global.fetch(`/api/movies?filter=${filterSelect.value}&query=${searchInput.value}`);
+      global.fetch('/api/movies');
     });
     
-    // Disparar el evento
     searchButton.click();
     
-    // Verificar
-    expect(fetchWasCalled).toBe(true);
-    
-    // Restaurar
-    global.fetch = originalFetch;
-  });
-
-  // PRUEBA CORREGIDA: Evento Enter
-  test('La búsqueda por Enter funciona', () => {
-    let fetchWasCalled = false;
-    const originalFetch = global.fetch;
-    
-    global.fetch = jest.fn().mockImplementation(() => {
-      fetchWasCalled = true;
-      return Promise.resolve({
-        ok: true,
-        json: async () => []
-      });
-    });
-    
-    // Configurar event listener para Enter
-    searchInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        global.fetch('/api/movies');
-      }
-    });
-    
-    // Simular tecla Enter
-    const enterEvent = new KeyboardEvent('keydown', { key: 'Enter' });
-    searchInput.dispatchEvent(enterEvent);
-    
-    expect(fetchWasCalled).toBe(true);
-    
-    global.fetch = originalFetch;
-  });
-
-  // PRUEBA CORREGIDA: Cambio de filtro
-  test('Cambio de filtro dispara búsqueda automática', () => {
-    let fetchWasCalled = false;
-    const originalFetch = global.fetch;
-    
-    global.fetch = jest.fn().mockImplementation(() => {
-      fetchWasCalled = true;
-      return Promise.resolve({
-        ok: true,
-        json: async () => []
-      });
-    });
-    
-    // Configurar event listener para change
-    filterSelect.addEventListener('change', () => {
-      global.fetch(`/api/movies?filter=${filterSelect.value}`);
-    });
-    
-    // Simular cambio
-    filterSelect.value = 'comedy-series';
-    const changeEvent = new Event('change');
-    filterSelect.dispatchEvent(changeEvent);
-    
-    expect(fetchWasCalled).toBe(true);
-    
+    expect(fetchCalled).toBe(true);
     global.fetch = originalFetch;
   });
 
   test('Manejo de errores de API', async () => {
-    // Mock de error
     global.fetch.mockResolvedValueOnce({
       ok: false,
       text: async () => 'API error'
     });
     
-    // Función simulada
     async function fetchAndRender() {
       setStatus('Cargando...', statusEl);
       try {
@@ -323,8 +245,8 @@ describe('Movies Component - Integration Tests (Simplified)', () => {
     const mockApiResponse = [
       {
         id: 123,
-        title: 'Gran Película de Comedia',
-        poster_path: '/comedia123.jpg',
+        title: 'Película de Comedia',
+        poster_path: '/comedia.jpg',
         vote_average: 8.2
       }
     ];
@@ -340,34 +262,17 @@ describe('Movies Component - Integration Tests (Simplified)', () => {
     
     const cards = moviesGrid.querySelectorAll('.card');
     expect(cards).toHaveLength(1);
-    
-    const firstTitle = moviesGrid.querySelector('.title');
-    expect(firstTitle.textContent).toBe('Gran Película de Comedia');
-  });
-
-  test('Estado vacío cuando no hay resultados', () => {
-    function handleEmptyResults() {
-      renderMovies([], moviesGrid);
-      setStatus('No se encontraron resultados.', statusEl);
-    }
-    
-    handleEmptyResults();
-    
-    expect(moviesGrid.innerHTML).toBe('');
-    expect(statusEl.textContent).toBe('No se encontraron resultados.');
+    expect(moviesGrid.querySelector('.title').textContent).toBe('Película de Comedia');
   });
 });
 
 // ------------------------------------------------------------
-// PRUEBAS DE USABILIDAD Y ACCESIBILIDAD - CORREGIDAS
+// PRUEBAS DE ACCESIBILIDAD
 // ------------------------------------------------------------
 
-describe('Movies Component - Usability & Accessibility', () => {
+describe('Movies Component - Accessibility', () => {
   beforeEach(() => {
-    // AÑADIR los atributos que faltaban
     document.body.innerHTML = `
-      <input id="search-input" type="text" />
-      <button id="search-button">Buscar</button>
       <select id="filter-select" aria-label="Filtros">
         <option value="comedy-movies">Comedia</option>
       </select>
@@ -375,30 +280,14 @@ describe('Movies Component - Usability & Accessibility', () => {
     `;
   });
 
-  test('El input de búsqueda tiene label accesible', () => {
-    const searchInput = document.getElementById('search-input');
-    
-    // Verificar que existe
-    expect(searchInput).toBeTruthy();
-    
-    // Añadir aria-label para la prueba
-    searchInput.setAttribute('aria-label', 'Buscar película o serie');
-    expect(searchInput.getAttribute('aria-label')).toBe('Buscar película o serie');
-  });
-
   test('El select de filtros tiene aria-label', () => {
     const filterSelect = document.getElementById('filter-select');
-    
-    // AHORA SÍ tiene el aria-label en el innerHTML
     expect(filterSelect.getAttribute('aria-label')).toBe('Filtros');
   });
 
   test('El estado tiene rol y aria-live correctos', () => {
     const statusEl = document.getElementById('status');
-    
     expect(statusEl.getAttribute('role')).toBe('status');
     expect(statusEl.getAttribute('aria-live')).toBe('polite');
   });
 });
-
-

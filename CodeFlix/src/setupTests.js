@@ -1,13 +1,15 @@
-const { jest } = require('@jest/globals');
+// src/setupTests.js
+import '@testing-library/dom';
+import { vi } from 'vitest';
 
-// Mock básico de fetch
-global.fetch = jest.fn();
+// Mock de fetch
+global.fetch = vi.fn();
 
 // Mock de Astro
 globalThis.Astro = {
   props: {},
   request: {},
-  redirect: jest.fn(),
+  redirect: vi.fn(),
 };
 
 // Mock de environment

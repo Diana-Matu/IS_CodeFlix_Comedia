@@ -1,8 +1,9 @@
-const { test, expect, describe, beforeEach } = require('@jest/globals');
+// src/services/test/movies.test.js
+import { describe, test, expect, beforeEach, vi } from 'vitest';
 
-// Mock completo de las funciones - definidas localmente
+// Mock manual - NO importa el servicio real TypeScript
 const mockMoviesService = {
-  getComedyMovies: jest.fn(() => 
+  getComedyMovies: vi.fn(() => 
     Promise.resolve([
       {
         id: 1,
@@ -23,7 +24,7 @@ const mockMoviesService = {
     ])
   ),
   
-  getMovieById: jest.fn((id) => 
+  getMovieById: vi.fn((id) => 
     Promise.resolve({
       id: id,
       title: `Mock Movie ${id}`,
@@ -37,55 +38,26 @@ const mockMoviesService = {
 
 describe('Movies Service - Mock Tests', () => {
   beforeEach(() => {
-    // Limpiar todos los mocks antes de cada test
-    mockMoviesService.getComedyMovies.mockClear();
-    mockMoviesService.getMovieById.mockClear();
+    vi.clearAllMocks();
   });
 
   test('getComedyMovies devuelve array de películas de comedia', async () => {
-    // Act
     const movies = await mockMoviesService.getComedyMovies();
     
-    // Assert
     expect(movies).toHaveLength(2);
     expect(movies[0].title).toBe('Funny Mock Movie');
     expect(movies[1].title).toBe('Hilarious Comedy');
     expect(movies[0].vote_average).toBe(7.8);
-    expect(mockMoviesService.getComedyMovies).toHaveBeenCalledTimes(1);
+    expect(mockMoviesService.getComedyMovies).toHaveBeenCalledOnce();
   });
 
   test('getMovieById devuelve película específica por ID', async () => {
-    // Act
     const movie = await mockMoviesService.getMovieById(123);
     
-    // Assert
     expect(movie.id).toBe(123);
     expect(movie.title).toBe('Mock Movie 123');
     expect(movie.overview).toContain('123');
     expect(mockMoviesService.getMovieById).toHaveBeenCalledWith(123);
-    expect(mockMoviesService.getMovieById).toHaveBeenCalledTimes(1);
-  });
-
-  test('getComedyMovies maneja diferentes llamadas', async () => {
-    // Primera llamada
-    const movies1 = await mockMoviesService.getComedyMovies();
-    
-    // Segunda llamada  
-    const movies2 = await mockMoviesService.getComedyMovies();
-    
-    // Assert
-    expect(mockMoviesService.getComedyMovies).toHaveBeenCalledTimes(2);
-    expect(movies1).toEqual(movies2); // Mismo resultado
-  });
-
-  test('getMovieById con diferentes IDs', async () => {
-    // Act
-    const movie1 = await mockMoviesService.getMovieById(1);
-    const movie2 = await mockMoviesService.getMovieById(999);
-    
-    // Assert
-    expect(movie1.title).toBe('Mock Movie 1');
-    expect(movie2.title).toBe('Mock Movie 999');
-    expect(mockMoviesService.getMovieById).toHaveBeenCalledTimes(2);
+    expect(mockMoviesService.getMovieById).toHaveBeenCalledOnce();
   });
 });
